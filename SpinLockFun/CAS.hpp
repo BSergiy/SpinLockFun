@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Common.h"
+
 #include <atomic>
 #include <string>
 
@@ -19,7 +21,7 @@ public:
             f = false;
 
             while (flag.load(std::memory_order_relaxed)) {
-                _mm_pause();
+                ___CPU_DELAY;
             }
         }
     }
@@ -27,7 +29,7 @@ public:
     bool try_lock() noexcept {
         bool f = false;
 
-        if (flag.compare_exchange_weak(f, true, std::memory_order_relaxed)) {
+        if (flag.compare_exchange_strong(f, true, std::memory_order_relaxed)) {
             return true;
         }
 

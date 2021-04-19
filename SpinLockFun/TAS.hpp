@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Common.h"
+
 #include <atomic>
 #include <string>
 
@@ -36,7 +38,7 @@ class TAS_SpinLock {
 public:
     void lock() noexcept {
         while (flag.exchange(true, std::memory_order_acquire)) {
-            _mm_pause();
+            ___CPU_DELAY;
         }
     }
 
@@ -73,7 +75,7 @@ public:
             while (flag.load(std::memory_order_relaxed)) {
                 // Issue X86 PAUSE or ARM YIELD instruction to reduce contention between
                 // hyper-threads
-                _mm_pause();
+                ___CPU_DELAY;
             }
         }
     }

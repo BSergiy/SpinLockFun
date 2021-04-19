@@ -144,6 +144,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="CAS.hpp" />
+    <ClInclude Include="Common.h" />
     <ClInclude Include="Guard.hpp" />
     <ClInclude Include="Poor.hpp" />
     <ClInclude Include="TAS.hpp" />

@@ -51,7 +51,7 @@ void init() {
     }
 }
 
-void calc() {
+void sync_calc() {
     for (size_t i = 0; i < matrix_size; ++i) {
         for (size_t j = 0; j < matrix_size; ++j) {
             m1[i][j] += m2[j][i];
@@ -59,12 +59,30 @@ void calc() {
     }
 }
 
-BenchInfo bench(string_view name, string_view description, size_t count, bool show, function<void()> f) {
+void async_calc(size_t size) {
+    std::vector<std::vector<int>> tmp_m;
+
+    tmp_m.reserve(size);
+
+    auto point_1 = chrono::system_clock::now();
+
+    for (size_t i = 0; i < size; ++i) {
+        tmp_m.emplace_back(std::vector<int>());
+        tmp_m[i].reserve(size);
+
+        for (size_t j = 0; j < size; ++j) {
+            auto point_2 = chrono::system_clock::now();
+
+            tmp_m[i].emplace_back(static_cast<int>((i + j) * chrono::duration_cast<chrono::nanoseconds>(point_2 - point_1).count()));
+        }
+    }
+}
+
+BenchInfo benchmark(string_view name, string_view description, size_t count, bool show, function<void()> f) {
     using namespace std::chrono;
 
     const size_t size = count;
     double avg = .0;
-
 
     try {
         while (count--) {
@@ -113,10 +131,13 @@ function<void()> make_case(size_t iterCount, size_t threadCount) {
             v.emplace_back(
                 [&spin, iterCount]
             {
+                srand((unsigned)time(0));
+
                 for (size_t i = 0; i < iterCount; ++i) {
+                    async_calc(static_cast<size_t>(10 + (rand() % 20)));
                     GUARD guard(spin);
                     
-                    calc();
+                    sync_calc();
                 }
             });
         }
@@ -140,12 +161,14 @@ int main()
     const bool showProgress = true;
 
 #define RUN_BENCH( SPINLOCK ) \
-    bench(SPINLOCK::name(), SPINLOCK::description(), bench_count, showProgress, make_case<SPINLOCK>(iteration_count_per_thread, thread_count))
+    benchmark(SPINLOCK::name(), SPINLOCK::description(), bench_count, showProgress, make_case<SPINLOCK>(iteration_count_per_thread, thread_count))
 
 #define RUN_BENCH_WITH_TRY_GUARD( SPINLOCK ) \
-    bench(SPINLOCK::name(), SPINLOCK::description(), bench_count, showProgress, make_case<SPINLOCK, TryGuard<SPINLOCK>>(iteration_count_per_thread, thread_count))
+    benchmark(SPINLOCK::name(), SPINLOCK::description(), bench_count, showProgress, make_case<SPINLOCK, TryGuard<SPINLOCK>>(iteration_count_per_thread, thread_count))
 
     vector<BenchInfo> results {
+        RUN_BENCH(TAS_SpinLock), // LOAD CACHE
+
         RUN_BENCH(TAS_SpinLock),
         RUN_BENCH(OTAS_spinlock),
         RUN_BENCH_WITH_TRY_GUARD(OTAS_spinlock),
